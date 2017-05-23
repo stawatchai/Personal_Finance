@@ -1,5 +1,26 @@
 import pymysql
 
+
+class DBase:
+
+    dsn = ("localhost","root","secret","personal_finance")
+
+    def __init__(self):
+        self.conn = pymysql.connect(*self.dsn)
+        self.cur = self.conn.cursor()
+
+    def dbase_create_database(self):
+        sql = "CREATE DATABASE IF NOT EXISTS finance_db"
+        self.cur.execute(sql)
+
+    def __enter__(self):
+        return DBase()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.conn:
+            self.conn.close()
+
+
 def checkTableExists(dbcon, tablename):
     dbcursor = dbcon.cursor()
     dbcursor.execute("""
