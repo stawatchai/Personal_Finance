@@ -59,7 +59,12 @@ class Database:
         self.db_create_tables()
         self.db_insert_default_accounts()
 
-    def db_list_all_account(self,acc_type):
+    def db_read_one_account(self,acc_no):
+        sql = "SELECT * FROM accountdb WHERE acc_no = '{}'".format(acc_no)
+        self._cursor2.execute(sql)
+        return self._cursor2.fetchone()
+
+    def db_read_all_account(self,acc_type):
         if acc_type == "All":
             sql = "SELECT * FROM accountdb WHERE acc_provider <> 'System' ORDER BY acc_type, acc_provider, acc_name"
         else:

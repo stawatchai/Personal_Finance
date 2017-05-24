@@ -13,16 +13,19 @@ def main_menu():
     print("6. Payment with Credit Bank Account")
     print("7. Payment with Cash Account")
     print("8. Add money to Cash Account")
-    print("9. Check Balance")
-    print("10. Exit Program")
-    print("11. Reset Program")
-    print("12. List Account")
+    print("9. List Account")
+    print("10. Check Balance")
+    print("11. Check Log")
+    print("12. Reset Program")
+    print("13. Exit Program")
     ans = 0
-    while not (ans in range(1,13)):
-        ans = input("\tPlease choose (1-12) : ").strip()
+    flag_exit = False
+    while not (ans in range(1,14)):
+        flag_exit = False
+        ans = input("\tPlease choose (1-13) : ").strip()
         if not(ans.isdigit()):
             ans = 0
-        elif eval(ans) <= 0 or eval(ans) > 12:
+        elif eval(ans) <= 0 or eval(ans) > 13:
             ans = 0
         else:
             ans = eval(ans)
@@ -34,59 +37,57 @@ def main_menu():
                        6: menu_payment_with_credit_bank_account,
                        7: menu_payment_with_cash_account,
                        8: menu_add_money_to_cash_account,
-                       9: menu_check_balance,
-                       10: menu_exit_program,
-                       11: menu_reset_program,
-                       12: menu_list_account
+                       9: menu_list_account,
+                       10: menu_check_balance,
+                       11: menu_check_log,
+                       12: menu_reset_program,
+                       13: menu_exit_program
                        }
-            options[ans]()
-
-
-def menu_delete_bank_account():
-    print("\n\n")
-    print("----- Delete Bank Account -----")
-    print("Please choose item number to delete")
-    acc_no_list = show_list_account()
-    if len(acc_no_list)==0:
-        print("\tNo avaliable account for delete")
-    else:
-        if len(acc_no_list)==1:
-            ans = input("\tChoose (only 1 or other for cancel) : ")
-        else:
-            ans = input("\tChoose ({}-{} or other for cancel ) : ".format(1,len(acc_no_list)))
-        if ans.isdigit():
-            ans = eval(ans) - 1
-            if ans in range(len(acc_no_list)):
-                acc_no = acc_no_list[ans]
-                db = database.Database()
-                db.delete_account(str(acc_no))
+            if ans == 13:
+                flag_exit = options[ans]()
             else:
-                print("\tCancel Delete")
-        else:
-            print("\tCancel Delete")
+                options[ans]()
+    return flag_exit
 
 def menu_deposit_to_bank_account():
     print("\n\n")
     print("----- Deposit Money to Bank Account -----")
     print("Please choose item number for deposit")
     acc_no_list = show_list_account()
+    flag_cancel = False
+    ans1 = ""
+    ans2 = ""
     if len(acc_no_list) == 0:
         print("\tNo avaliable account.")
     else:
         if len(acc_no_list) == 1:
-            ans = input("\tChoose (only 1 or other for cancel) : ")
+            ans1 = input("\tChoose (only 1 or other for cancel) : ")
         else:
-            ans = input("\tChoose ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
-        if ans.isdigit():
-            ans = eval(ans) - 1
-            if ans in range(len(acc_no_list)):
-                acc_no = acc_no_list[ans]
-                db = database.Database()
-                db.update_account_amount_credit(acc_no,100)
+            ans1 = input("\tChoose ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
+        if ans1.isdigit():
+            if ans1 in range(len(acc_no_list)):
+                ans2 = input("Cash to deposit amount :")
+                try:
+                    ans2 = Decimal(ans2)
+                except ValueError:
+                    print("Invalid value cash amount.")
+                    flag_cancel = True
             else:
-                print("\tCancel Deposit")
+                flag_cancel = True
         else:
-            print("\tCancel Delete")
+            flag_cancel = True
+    if not flag_cancel:
+        ans1 = eval(ans1) - 1
+        if ans1 in range(len(acc_no_list)):
+            acc_no = acc_no_list[ans1]
+            saving_acc = read_account_info(acc_no)
+            saving_acc.deposit(ans2)
+
+            #cash_acc = read_account_info('Cash')
+            #db = database.Database()
+            #db.update_account_amount_credit(acc_no,100)
+    else:
+        print("\tCancel Deposit")
 
 
 def menu_withdraw_from_bank_account():
@@ -112,10 +113,17 @@ def menu_add_money_to_cash_account():
 def menu_check_balance():
     pass
 
-
-def menu_exit_program():
+def menu_check_log():
     pass
 
+def menu_exit_program():
+    print("\n\n")
+    print("----- Exit Program -----")
+    ans = input("\tDo you want to exit program? (y/n) : ").lower()
+    if ans in ['y','yes']:
+        return True
+    else:
+        return False
 
 def menu_reset_program():
     print("\n\n")
@@ -129,28 +137,46 @@ def menu_reset_program():
     else:
         print("Cancel reset program")
 
-def read_account_info():
+def read_account_info(acc_no):
     db = database.Database()
-    results = db.db_list_all_account('Saving')
-    #read Saving account
-    saving = account.saving_account()
-    savings = []
-    for res in results:
-        saving.acc_id = res[0]
-        saving.acc_provider = res[1]
-        saving.acc_no = res[2]
-        saving.acc_name = res[3]
-        saving.acc_type = res[4]
-        saving.acc_create_datetime = res[5]
-        saving.acc_status = res[6]
-        saving.acc_credit = res[7]
-        saving.acc_balance = res[8]
-        savings.append(saving)
-
+    res = db.db_read_one_account(acc_no)
+    #acc_id = res[0]
+    #acc_provider = res[1]
+    #acc_no = res[2]
+    #acc_name = res[3]
+    acc_type = res[4]
+    #acc_create_datetime = res[5]
+    #acc_status = res[6]
+    acc_credit = res[7]
+    acc_balance = res[8]
+    if acc_type == 'Saving':
+        acc1 = account.Saving_Account()
+        acc1.acc_no = acc_no
+        acc1.acc_balance = acc_balance
+    elif acc_type == 'Credit':
+        acc1 = account.Credit_Account()
+        acc1.acc_no = acc_no
+        acc1.acc_balance = acc_balance
+        acc1.acc_credit = acc_credit
+    elif acc_type == 'Income':
+        acc1 = account.Income_Account()
+        acc1.acc_no = acc_no
+        acc1.acc_balance = acc_balance
+    elif acc_type == 'Cash':
+        acc1 = account.Cash_Account()
+        acc1.acc_no = acc_no
+        acc1.acc_balance = acc_balance
+    elif acc_type == 'Shop':
+        acc1 = account.Shop_Account()
+        acc1.acc_no = acc_no
+        acc1.acc_balance = acc_balance
+    else:
+        acc1 = account.Account()
+    return acc1
 
 def show_list_account():
     db = database.Database()
-    results = db.db_list_all_account('All')
+    results = db.db_read_all_account('All')
     num = 0
     acc_no_list=[]
     for res in results:
@@ -171,7 +197,7 @@ def show_list_account():
 
 def menu_list_account():
     db = database.Database()
-    results = db.db_list_all_account('All')
+    results = db.db_list_read_account('All')
     print()
     print("{:15s} {:15s} {:20s} {:20s} {:>15s} {:>15s}".format('Bank Name', 'Account Type', 'Account Number',
                                                              'Account Name', 'Balance', 'Credit Limmit'))
@@ -238,15 +264,42 @@ def menu_create_bank_account():
             db.db_insert_saving_account(acc_bank, acc_no, acc_name)
 
 
+def menu_delete_bank_account():
+    print("\n\n")
+    print("----- Delete Bank Account -----")
+    print("Please choose item number to delete")
+    acc_no_list = show_list_account()
+    if len(acc_no_list)==0:
+        print("\tNo avaliable account for delete")
+    else:
+        if len(acc_no_list)==1:
+            ans = input("\tChoose (only 1 or other for cancel) : ")
+        else:
+            ans = input("\tChoose ({}-{} or other for cancel ) : ".format(1,len(acc_no_list)))
+        if ans.isdigit():
+            ans = eval(ans) - 1
+            if ans in range(len(acc_no_list)):
+                acc_no = acc_no_list[ans]
+                db = database.Database()
+                db.delete_account(str(acc_no))
+            else:
+                print("\tCancel Delete")
+        else:
+            print("\tCancel Delete")
+
 if __name__ == '__main__':
 
     status = database.db_check_connection()
     if status:
         db = database.Database()
         db.init_database()
-        main_menu()
+        flag_exit = False
+        while not flag_exit:
+            flag_exit = main_menu()
+            if not flag_exit:
+                input("\nPress Enter to continue...")
     else:
-        print("Database connection error")
+        print("Database connection error.\nPlease check database is running.")
 
 
     #menu_create_bank_account()
