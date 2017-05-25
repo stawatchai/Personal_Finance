@@ -64,6 +64,7 @@ class Saving_Account(Account):
 
     def deposit(self,value):
         self._acc_balance += value
+        return True
 
     def transfer_from(self,value):
         if self._acc_balance >= value:
@@ -74,6 +75,7 @@ class Saving_Account(Account):
 
     def transfer_to(self,value):
         self._acc_balance += value
+        return True
 
 
 class Credit_Account(Account):
@@ -89,6 +91,7 @@ class Credit_Account(Account):
 
     def deposit(self,value):
         self._acc_balance += value
+        return True
 
     def transfer_from(self,value):
         if (self._acc_balance + self._acc_credit) >= value:
@@ -99,6 +102,7 @@ class Credit_Account(Account):
 
     def transfer_to(self,value):
         self._acc_balance += value
+        return True
 
     def payment_by_credit(self,value):
         if (self._acc_balance + self._acc_credit) >= value:
@@ -114,6 +118,7 @@ class Cash_Account(Account):
 
     def increse_money(self,value):
         self._acc_balance += value
+        return True
 
     def decrease_money(self,value):
         if (self._acc_balance + self._acc_credit) >= value:
@@ -129,6 +134,7 @@ class Income_Account(Account):
 
     def income_log(self,value):
         self._acc_balance += value
+        return True
 
 
 class Shop_Account(Account):
@@ -137,20 +143,5 @@ class Shop_Account(Account):
 
     def shop_log(self,value):
         self._acc_balance += value
-
-
-if __name__ == '__main__':
-    list_account = [Saving_Account()]
-    list_account[0].acc_no = "12345678"
-    list_account[0].acc_type = "Saving"
-    list_account[0].acc_credit = 0
-    list_account[0].acc_balance = 0
-
-    list_account[0].deposit(500)
-    print(list_account[0].acc_balance)
-    status = list_account[0].withdraw(1440)
-    if status:
-        print(list_account[0].acc_balance)
-    else:
-        print("Not enough money")
+        return True
 

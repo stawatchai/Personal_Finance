@@ -65,8 +65,9 @@ def menu_deposit_to_bank_account():
         else:
             ans1 = input("\tChoose ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
         if ans1.isdigit():
+            ans1 = eval(ans1) - 1
             if ans1 in range(len(acc_no_list)):
-                ans2 = input("Cash to deposit amount :")
+                ans2 = input("Cash to deposit amount : ")
                 try:
                     ans2 = Decimal(ans2)
                 except ValueError:
@@ -77,21 +78,57 @@ def menu_deposit_to_bank_account():
         else:
             flag_cancel = True
     if not flag_cancel:
-        ans1 = eval(ans1) - 1
-        if ans1 in range(len(acc_no_list)):
-            acc_no = acc_no_list[ans1]
-            saving_acc = read_account_info(acc_no)
-            saving_acc.deposit(ans2)
-
-            #cash_acc = read_account_info('Cash')
-            #db = database.Database()
-            #db.update_account_amount_credit(acc_no,100)
+        acc_no = acc_no_list[ans1][0]
+        my_acc = read_account_info(acc_no)
+        ans = my_acc.deposit(ans2)
+        if ans:
+            db = database.Database()
+            db.update_account_balance(acc_no,my_acc.acc_balance)
+        else:
+            print("Error deposit, transaction cancel")
     else:
         print("\tCancel Deposit")
 
 
 def menu_withdraw_from_bank_account():
-    pass
+    print("\n\n")
+    print("----- Withdraw Money From Bank Account -----")
+    print("Please choose item number for withdraw")
+    acc_no_list = show_list_account()
+    flag_cancel = False
+    ans1 = ""
+    ans2 = ""
+    if len(acc_no_list) == 0:
+        print("\tNo avaliable account.")
+    else:
+        if len(acc_no_list) == 1:
+            ans1 = input("\tChoose (only 1 or other for cancel) : ")
+        else:
+            ans1 = input("\tChoose ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
+        if ans1.isdigit():
+            ans1 = eval(ans1) - 1
+            if ans1 in range(len(acc_no_list)):
+                ans2 = input("Withdraw cash amount : ")
+                try:
+                    ans2 = Decimal(ans2)
+                except ValueError:
+                    print("Invalid value cash amount.")
+                    flag_cancel = True
+            else:
+                flag_cancel = True
+        else:
+            flag_cancel = True
+    if not flag_cancel:
+        acc_no = acc_no_list[ans1][0]
+        saving_acc = read_account_info(acc_no)
+        ans = saving_acc.withdraw(ans2)
+        if ans:
+            db = database.Database()
+            db.update_account_balance(acc_no, saving_acc.acc_balance)
+        else:
+            print("Not enough money or credit, transaction cancel")
+    else:
+        print("\tCancel Withdraw")
 
 
 def menu_transfer_between_bank_account():
@@ -197,7 +234,7 @@ def show_list_account():
 
 def menu_list_account():
     db = database.Database()
-    results = db.db_list_read_account('All')
+    results = db.db_read_all_account('All')
     print()
     print("{:15s} {:15s} {:20s} {:20s} {:>15s} {:>15s}".format('Bank Name', 'Account Type', 'Account Number',
                                                              'Account Name', 'Balance', 'Credit Limmit'))
@@ -214,6 +251,7 @@ def menu_list_account():
         acc_credit = res[7]
         acc_balance = res[8]
         print("{:15s} {:15s} {:20s} {:20s} {:15,.2f} {:15,.2f}".format(acc_provider,acc_type,acc_no,acc_name,acc_balance,acc_credit))
+
 
 def menu_create_bank_account():
     print("\n\n")
@@ -244,7 +282,7 @@ def menu_create_bank_account():
                 acc_credit = Decimal(input("\tEnter credit limit (Positive decimal) : "))
             except:
                 acc_credit = '0'
-    print("Confirm Create Account Summary")
+    print("\nConfirm Create Account")
     print("\tBank Name : {}".format(acc_bank))
     dic_type = {"s":"Saving Account","c":"Credit Account"}
     print("\tAccount Type : {}".format(dic_type[acc_type]))
@@ -279,13 +317,16 @@ def menu_delete_bank_account():
         if ans.isdigit():
             ans = eval(ans) - 1
             if ans in range(len(acc_no_list)):
-                acc_no = acc_no_list[ans]
+                acc_no = acc_no_list[ans][0]
                 db = database.Database()
                 db.delete_account(str(acc_no))
             else:
                 print("\tCancel Delete")
         else:
             print("\tCancel Delete")
+
+def print_enter_to_continue():
+    input("\nPress Enter to continue")
 
 if __name__ == '__main__':
 
@@ -297,7 +338,7 @@ if __name__ == '__main__':
         while not flag_exit:
             flag_exit = main_menu()
             if not flag_exit:
-                input("\nPress Enter to continue...")
+                print_enter_to_continue()
     else:
         print("Database connection error.\nPlease check database is running.")
 

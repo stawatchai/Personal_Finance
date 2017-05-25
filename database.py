@@ -153,10 +153,9 @@ class Database:
             self._conn2.rollback()
             return False
 
-    def update_account_amount_credit(self,acc_no,amount):
+    def update_account_balance(self,acc_no,amount):
         sql = "update accountdb set acc_balance={} where acc_no = '{}'".format(amount,acc_no)
         try:
-            print(sql)
             self._cursor2.execute(sql)
             self._conn2.commit()
             return True
