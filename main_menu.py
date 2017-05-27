@@ -1,19 +1,20 @@
 from decimal import Decimal
 import account
 import database
+from datetime import date, time, datetime
 
 
 def main_menu():
     print("\nPersonal Finance Management")
-    print("1. Create Bank Account")
-    print("2. Delete Bank Account")
-    print("3. Deposit to Bank Account")
-    print("4. Withdraw from Bank Account")
-    print("5. Transfer between Bank Account")
-    print("6. Payment with Credit Bank Account")
-    print("7. Payment with Cash Account")
-    print("8. Add money to Cash Account")
-    print("9. List Account")
+    print("1. Show Accounts Summary")
+    print("2. Add money to Cash Account")
+    print("3. Create Bank Account")
+    print("4. Delete Bank Account")
+    print("5. Deposit to Bank Account")
+    print("6. Withdraw from Bank Account")
+    print("7. Transfer between Bank Account")
+    print("8. Payment with Credit Bank Account")
+    print("9. Payment with Cash Account")
     print("10. Check Balance")
     print("11. Check Log")
     print("12. Reset Program")
@@ -29,15 +30,15 @@ def main_menu():
             ans = 0
         else:
             ans = eval(ans)
-            options = {1: menu_create_bank_account,
-                       2: menu_delete_bank_account,
-                       3: menu_deposit_to_bank_account,
-                       4: menu_withdraw_from_bank_account,
-                       5: menu_transfer_between_bank_account,
-                       6: menu_payment_with_credit_bank_account,
-                       7: menu_payment_with_cash_account,
-                       8: menu_add_money_to_cash_account,
-                       9: menu_list_account,
+            options = {1: menu_list_account,
+                       2: menu_add_money_to_cash_account,
+                       3: menu_create_bank_account,
+                       4: menu_delete_bank_account,
+                       5: menu_deposit_to_bank_account,
+                       6: menu_withdraw_from_bank_account,
+                       7: menu_transfer_between_bank_account,
+                       8: menu_payment_with_credit_bank_account,
+                       9: menu_payment_with_cash_account,
                        10: menu_check_balance,
                        11: menu_check_log,
                        12: menu_reset_program,
@@ -51,14 +52,16 @@ def main_menu():
 
 def menu_deposit_to_bank_account():
     print("\n\n")
+    cash_acc = read_account_info('Cash')
     print("----- Deposit Money to Bank Account -----")
     print("Please choose item number for deposit")
-    acc_no_list = show_list_account()
+    acc_no_list = show_list_account('Bank')
     flag_cancel = False
     ans1 = ""
     ans2 = ""
     if len(acc_no_list) == 0:
         print("\tNo avaliable account.")
+        flag_cancel = True
     else:
         if len(acc_no_list) == 1:
             ans1 = input("\tChoose (only 1 or other for cancel) : ")
@@ -67,11 +70,14 @@ def menu_deposit_to_bank_account():
         if ans1.isdigit():
             ans1 = eval(ans1) - 1
             if ans1 in range(len(acc_no_list)):
-                ans2 = input("Cash to deposit amount : ")
+                ans2 = input("\tCash to deposit amount : ")
                 try:
                     ans2 = Decimal(ans2)
                 except ValueError:
-                    print("Invalid value cash amount.")
+                    print("\tInvalid value cash amount.")
+                    flag_cancel = True
+                if ans2 > cash_acc.acc_balance:
+                    print("\tNot enough cash to deposit (you have cash only {:,.2f})".format(cash_acc.acc_balance))
                     flag_cancel = True
             else:
                 flag_cancel = True
@@ -80,12 +86,16 @@ def menu_deposit_to_bank_account():
     if not flag_cancel:
         acc_no = acc_no_list[ans1][0]
         my_acc = read_account_info(acc_no)
-        ans = my_acc.deposit(ans2)
-        if ans:
+        result1 = my_acc.deposit(ans2)
+        result2 = cash_acc.withdraw(ans2)
+        if result1 and result2:
             db = database.Database()
             db.update_account_balance(acc_no,my_acc.acc_balance)
+            db.update_account_balance('Cash',cash_acc.acc_balance)
+            db.insert_transaction_log(datetime.now(),'Deposit',ans2,'Cash',acc_no,cash_acc.acc_balance,my_acc.acc_balance)
+            print("\t... Transaction successful ...")
         else:
-            print("Error deposit, transaction cancel")
+            print("\tError deposit, transaction cancel")
     else:
         print("\tCancel Deposit")
 
@@ -94,12 +104,13 @@ def menu_withdraw_from_bank_account():
     print("\n\n")
     print("----- Withdraw Money From Bank Account -----")
     print("Please choose item number for withdraw")
-    acc_no_list = show_list_account()
+    acc_no_list = show_list_account('Bank')
     flag_cancel = False
     ans1 = ""
     ans2 = ""
     if len(acc_no_list) == 0:
         print("\tNo avaliable account.")
+        flag_cancel = True
     else:
         if len(acc_no_list) == 1:
             ans1 = input("\tChoose (only 1 or other for cancel) : ")
@@ -108,11 +119,11 @@ def menu_withdraw_from_bank_account():
         if ans1.isdigit():
             ans1 = eval(ans1) - 1
             if ans1 in range(len(acc_no_list)):
-                ans2 = input("Withdraw cash amount : ")
+                ans2 = input("\tPlease enter withdraw amount : ")
                 try:
                     ans2 = Decimal(ans2)
                 except ValueError:
-                    print("Invalid value cash amount.")
+                    print("\tInvalid amount value.")
                     flag_cancel = True
             else:
                 flag_cancel = True
@@ -125,33 +136,177 @@ def menu_withdraw_from_bank_account():
         if ans:
             db = database.Database()
             db.update_account_balance(acc_no, saving_acc.acc_balance)
+            print("\t... Transaction successful ...")
         else:
-            print("Not enough money or credit, transaction cancel")
+            print("\tNot enough money or credit, transaction cancel")
     else:
         print("\tCancel Withdraw")
 
 
 def menu_transfer_between_bank_account():
-    pass
+    print("\n\n")
+    print("----- Transfer Money Between Bank Account -----")
+    print("Please choose item number for transfer")
+    acc_no_list = show_list_account('Bank')
+    flag_cancel = False
+    ans1 = ""
+    ans2 = ""
+    ans3 = ""
+    if len(acc_no_list) == 0:
+        print("\tNo avaliable account.")
+        flag_cancel = True
+    elif len(acc_no_list) == 1:
+        print("\tOnly one account can't transfer")
+        flag_cancel = True
+    else:
+        ans1 = input("\tTransfer from account item ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
+        ans2 = input("\tTo account item ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
+        if ans1.isdigit() and ans2.isdigit():
+            ans1 = eval(ans1) - 1
+            ans2 = eval(ans2) - 1
+            if ans1 in range(len(acc_no_list)) and ans2 in range(len(acc_no_list)):
+                if ans1 != ans2 :
+                    ans3 = input("\tCash amount for transfer : ")
+                    try:
+                        ans3 = Decimal(ans3)
+                    except ValueError:
+                        print("\tInvalid value cash amount.")
+                        flag_cancel = True
+                else:
+                    print("\n\tCan't transfer to same account")
+                    flag_cancel = True
+            else:
+                flag_cancel = True
+        else:
+            flag_cancel = True
+    if not flag_cancel:
+        acc_no1 = acc_no_list[ans1][0]
+        acc_no2 = acc_no_list[ans2][0]
+        acc_from = read_account_info(acc_no1)
+        acc_to = read_account_info(acc_no2)
+        result1 = acc_from.transfer_from(ans3)
+        result2 = acc_to.transfer_to(ans3)
+        if result1 and result2:
+            db = database.Database()
+            db.update_account_balance(acc_no1, acc_from.acc_balance)
+            db.update_account_balance(acc_no2,acc_to.acc_balance)
+            print("\t... Transaction successful ...")
+        else:
+            print("\tNot enough money or credit, transaction cancel")
+    else:
+        print("\tCancel Transfer")
 
 
 def menu_payment_with_credit_bank_account():
-    pass
+    print("\n\n")
+    print("----- Make Payment with your Credit Account -----")
+    print("Please choose account item number for the payment")
+    acc_no_list = show_list_account('Credit')
+    flag_cancel = False
+    ans1 = ""
+    ans2 = ""
+    if len(acc_no_list) == 0:
+        print("\tNo avaliable account.")
+        flag_cancel = True
+    else:
+        if len(acc_no_list) == 1:
+            ans1 = input("\tChoose (only 1 or other for cancel) : ")
+        else:
+            ans1 = input("\tChoose ({}-{} or other for cancel ) : ".format(1, len(acc_no_list)))
+        if ans1.isdigit():
+            ans1 = eval(ans1) - 1
+            if ans1 in range(len(acc_no_list)):
+                ans2 = input("\tPayment amount : ")
+                try:
+                    ans2 = Decimal(ans2)
+                except ValueError:
+                    print("\tInvalid amount value.")
+                    flag_cancel = True
+            else:
+                flag_cancel = True
+        else:
+            flag_cancel = True
+    if not flag_cancel:
+        acc_no = acc_no_list[ans1][0]
+        saving_acc = read_account_info(acc_no)
+        ans = saving_acc.payment_by_credit(ans2)
+        if ans:
+            db = database.Database()
+            db.update_account_balance(acc_no, saving_acc.acc_balance)
+            print("\t... Transaction successful ...")
+        else:
+            print("Not enough money or credit, transaction cancel")
+    else:
+        print("\tCancel Payment")
 
 
 def menu_payment_with_cash_account():
-    pass
+    flag_cancel = False
+    print("\n\n")
+    print("----- Make Payment with Cash -----")
+    ans = input("\tPayment amount : ")
+    try:
+        ans = Decimal(ans)
+    except ValueError:
+        print("\tInvalid amount value.")
+        flag_cancel = True
+    if not flag_cancel:
+        cash_acc = read_account_info('Cash')
+        ans = cash_acc.withdraw(ans)
+        if ans:
+            db = database.Database()
+            db.update_account_balance('Cash', cash_acc.acc_balance)
+            print("\t... Transaction successful ...")
+        else:
+            print("\tNot enough cash, transaction cancel")
+    else:
+        print("\tCancel Payment")
 
 
 def menu_add_money_to_cash_account():
-    pass
+    flag_cancel = False
+    print("\n\n")
+    print("----- Add Money to Cash Account -----")
+    ans = input("\tCash amount : ")
+    try:
+        ans = Decimal(ans)
+    except ValueError:
+        print("\tInvalid value cash amount.")
+        flag_cancel = True
+    if not flag_cancel:
+        my_acc = read_account_info('Cash')
+        ans = my_acc.deposit(ans)
+        if ans:
+            db = database.Database()
+            db.update_account_balance('Cash', my_acc.acc_balance)
+            print("\t... Transaction successful ...")
+        else:
+            print("\tError add money, transaction cancel")
+    else:
+        print("\tCancel add money to cash")
 
 
 def menu_check_balance():
     pass
 
 def menu_check_log():
-    pass
+    db = database.Database()
+    results = db.db_read_all_transaction('All')
+    print()
+    print("{:10s}\t\t{:10s}\t{:10s}\t{:10s}\t{:10s}\t{:10s}\t{:10s}\t{:10s}".format('Transaction ID', 'Date Time', 'Action', 'Amount', 'From Account', 'From Balance', 'To Account', 'To Balance'))
+    #trans_id, trans_datetime, trans_action, trans_amount, from_acc, to_acc, from_acc_balance, to_acc_balance
+    print('-' * 105)
+    for res in results:
+        trans_id = res[0]
+        trans_datetime = res[1]
+        trans_action = res[2]
+        trans_amount = res[3]
+        from_acc = res[4]
+        to_acc = res[5]
+        from_acc_balance = res[6]
+        to_acc_balance = res[7]
+        print("{:d}\t\t{}\t{:>10s}\t{:10,.2f}\t{:10s}\t{:10,.2f}\t{:10s}\t{:10,.2f}".format(trans_id, trans_datetime, trans_action, trans_amount, from_acc, from_acc_balance, to_acc, to_acc_balance))
+
 
 def menu_exit_program():
     print("\n\n")
@@ -170,9 +325,9 @@ def menu_reset_program():
     if ans == 'confirm':
         db = database.Database()
         db.db_drop_tables()
-        print("Program reset successful")
+        print("\t... Program reset successful ...")
     else:
-        print("Cancel reset program")
+        print("\tCancel reset program")
 
 def read_account_info(acc_no):
     db = database.Database()
@@ -211,9 +366,9 @@ def read_account_info(acc_no):
         acc1 = account.Account()
     return acc1
 
-def show_list_account():
+def show_list_account(acc_type):
     db = database.Database()
-    results = db.db_read_all_account('All')
+    results = db.db_read_all_account(acc_type)
     num = 0
     acc_no_list=[]
     for res in results:
@@ -229,15 +384,15 @@ def show_list_account():
         acc_balance = res[8]
         data = [acc_no,acc_balance,acc_credit]
         acc_no_list.append(data)
-        print("{}. Account: {:15} Name: {:15} Type: {:10} Bank: {:10} Balance: {:,.2f}".format(num,acc_no,acc_name,acc_type,acc_provider,acc_balance))
+        print("{}. Account: {:15} Name: {:15} Type: {:10} Bank: {:10} Credit: {:<10,.2f} Balance: {:10,.2f}".format(num,acc_no,acc_name,acc_type,acc_provider,acc_credit,acc_balance))
     return acc_no_list
 
 def menu_list_account():
     db = database.Database()
     results = db.db_read_all_account('All')
     print()
-    print("{:15s} {:15s} {:20s} {:20s} {:>15s} {:>15s}".format('Bank Name', 'Account Type', 'Account Number',
-                                                             'Account Name', 'Balance', 'Credit Limmit'))
+    print("{:15s} {:15s} {:20s} {:15s} {:>15s} {:>15s}".format('Bank Name', 'Account Type', 'Account Number',
+                                                             'Account Name','Credit Limit', 'Balance'))
     print('-'*105)
 
     for res in results:
@@ -250,7 +405,7 @@ def menu_list_account():
         acc_status = res[6]
         acc_credit = res[7]
         acc_balance = res[8]
-        print("{:15s} {:15s} {:20s} {:20s} {:15,.2f} {:15,.2f}".format(acc_provider,acc_type,acc_no,acc_name,acc_balance,acc_credit))
+        print("{:15s} {:15s} {:20s} {:15s} {:15,.2f} {:15,.2f}".format(acc_provider,acc_type,acc_no,acc_name,acc_credit,acc_balance))
 
 
 def menu_create_bank_account():
@@ -306,7 +461,7 @@ def menu_delete_bank_account():
     print("\n\n")
     print("----- Delete Bank Account -----")
     print("Please choose item number to delete")
-    acc_no_list = show_list_account()
+    acc_no_list = show_list_account('Bank')
     if len(acc_no_list)==0:
         print("\tNo avaliable account for delete")
     else:
@@ -326,7 +481,9 @@ def menu_delete_bank_account():
             print("\tCancel Delete")
 
 def print_enter_to_continue():
-    input("\nPress Enter to continue")
+    input("\nPress Enter to continue...")
+
+
 
 if __name__ == '__main__':
 
@@ -340,7 +497,7 @@ if __name__ == '__main__':
             if not flag_exit:
                 print_enter_to_continue()
     else:
-        print("Database connection error.\nPlease check database is running.")
+        print("Database connection error.\nPlease check mySQL database is running.")
 
 
     #menu_create_bank_account()

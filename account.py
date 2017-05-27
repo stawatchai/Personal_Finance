@@ -116,11 +116,11 @@ class Cash_Account(Account):
     def __init__(self, acc_no='Cash', acc_type='Cash', acc_balance=0, acc_credit=0):
         super().__init__(acc_no, acc_type, acc_balance, acc_credit)
 
-    def increse_money(self,value):
+    def deposit(self,value):
         self._acc_balance += value
         return True
 
-    def decrease_money(self,value):
+    def withdraw(self,value):
         if (self._acc_balance + self._acc_credit) >= value:
             self._acc_balance -= value
             return True
